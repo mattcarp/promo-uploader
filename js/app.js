@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Upload -- main function
  * @return {void}
  */
-function upload() {
+const upload = () => {
   let i = -1;
   let id = 1;
   let startedAt = new Date();
@@ -190,7 +190,7 @@ function upload() {
           filetype: file.type
         },
         parallelUploads: 1,
-        onError: function (error) {
+        onError: (error) => {
           console.log('Failed because: ' + error);
 
           btnPause.style.display = 'none';
@@ -198,7 +198,7 @@ function upload() {
           btnUpload.setAttribute('disabled', 'true');
           row.className = 'grid error';
         },
-        onProgress: function (bytesUploaded) {
+        onProgress: (bytesUploaded) => {
           fileUploaded = bytesUploaded;
           let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
           let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
@@ -225,7 +225,7 @@ function upload() {
             btnPause.style.display = 'flex';
           }
         },
-        onSuccess: function () {
+        onSuccess: () => {
           console.log('Download %s from %s', upload.file.name, upload.url);
           progressSpeed.innerHTML = '';
           totalUploaded += fileUploaded;
@@ -297,7 +297,7 @@ function upload() {
  * @param {number} index
  * @return {void}
  */
-function updateFilesList(file, index) {
+const updateFilesList = (file, index) => {
   const grid = document.createElement('div');
   const cellState = document.createElement('div');
   const cellFileName = document.createElement('div');
@@ -354,7 +354,7 @@ function updateFilesList(file, index) {
  * @param {number} bytes
  * @return {string}
  */
-function updateSize(bytes) {
+const updateSize = (bytes) => {
   let output = bytes + ' bytes';
 
   for (let multiples = ['Kb', 'Mb', 'Gb', 'Tb'], multiple = 0, approx = bytes / 1024; approx > 1; approx /= 1024, multiple++) {
@@ -370,7 +370,7 @@ function updateSize(bytes) {
  * @param {number} maxLength
  * @return {string} fileName
  */
-function smartTrim(fileName, maxLength) {
+const smartTrim = (fileName, maxLength) => {
   if (!fileName) return fileName;
   if (maxLength < 1) return fileName;
   if (fileName.length <= maxLength) return fileName;
@@ -390,7 +390,7 @@ function smartTrim(fileName, maxLength) {
  * @param {number} decimals
  * @return {string} result
  */
-function clockFormat(seconds, decimals) {
+const clockFormat = (seconds, decimals) => {
   let hours;
   let minutes;
   let secs;
@@ -424,7 +424,7 @@ function clockFormat(seconds, decimals) {
  * @param {any []} previousUploads to be uploaded
  * @return {null | number}
  */
-function askToResumeUpload(previousUploads) {
+const askToResumeUpload = (previousUploads) => {
   if (previousUploads.length === 0) return null;
 
   let text = 'You tried to upload this file previously at these times:\n\n';
@@ -446,7 +446,7 @@ function askToResumeUpload(previousUploads) {
  * @param {Element} dropZoneElement the html element for the drop area
  * @param {File} file the file to be used as the thumbnail
  */
-function updateThumbnail(dropZoneElement, file) {
+const updateThumbnail = (dropZoneElement, file) => {
   let thumbnailElement = dropZoneElement.querySelector('.drop-zone__thumb');
   dropZoneElement.querySelector('.drop-zone__prompt').style.opacity = '0';
   thumbnailElement = document.createElement('div');
@@ -487,7 +487,7 @@ function updateThumbnail(dropZoneElement, file) {
  * Cleaning progress bar
  * @return {void}
  */
-function cleanProgressBar() {
+const cleanProgressBar = () => {
   progressTotal.innerHTML = '';
   progressLength.innerHTML = '';
   progressSize.innerHTML = '';
@@ -500,7 +500,7 @@ function cleanProgressBar() {
  * Activation of buttons
  * @return {void}
  */
-function btnActivate() {
+const btnActivate = () => {
   btnThumbView.removeAttribute('disabled');
   btnSort.removeAttribute('disabled');
   btnClear.removeAttribute('disabled');
@@ -510,7 +510,7 @@ function btnActivate() {
  * Close sort list
  * @return {void}
  */
-function closeSortList() {
+const closeSortList = () => {
   if (isSortOpen) {
     btnSort.click();
     isSortOpen = false;
@@ -522,7 +522,7 @@ function closeSortList() {
  * @param {string} key
  * @return {void}
  */
-function sortBy(key) {
+const sortBy = (key) => {
   filesList = filesList.sort((a, b) => {
     if (key === 'name') {
       if (a.name > b.name) return 1;
