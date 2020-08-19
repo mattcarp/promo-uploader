@@ -3,7 +3,7 @@ let uploadList = [];
 let totalSize = 0;
 let totalUploaded = 0;
 let fileUploaded = 0;
-let uploading = 1;
+let idUploading = 1;
 let isSortOpen = false;
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
@@ -55,10 +55,7 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
   dropZoneElement.addEventListener('click', () => {
     if (dropZone.className !== 'disabled') {
       inputElement.click();
-      document.querySelectorAll('.drop-zone__thumb').forEach((el) => {
-        el.remove();
-      });
-      dropZoneElement.querySelector('.drop-zone__prompt').style.opacity = '1';
+      cleanThumbnails();
     }
   });
 
@@ -99,9 +96,7 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
     if (debugMode) console.log(`drop event`, e.dataTransfer.files);
 
     if (e.dataTransfer.files.length && dropZone.className !== 'disabled') {
-      document.querySelectorAll('.drop-zone__thumb').forEach((el) => {
-        el.remove();
-      });
+      cleanThumbnails();
       inputElement.files = e.dataTransfer.files;
 
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
@@ -161,9 +156,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnClear.addEventListener('click', () => {
+    btnPause.click();
     list.innerHTML = '';
     filesList = [];
     uploadList = [];
+    btnUpload.setAttribute('disabled', 'true');
+    btnClear.setAttribute('disabled', 'true');
+    cleanThumbnails();
+    cleanProgressBar();
     closeSortList();
   });
 });
@@ -173,14 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
  * @return {void}
  */
 const upload = () => {
-  let i = -1;
   let id = 1;
   let startedAt = new Date();
 
   const startUpload = () => {
-    i++;
-    if (i < uploadList.length) {
-      let file = uploadList[i];
+    if (uploadList.length) {
+      let file = uploadList[0];
       let row = document.querySelector('.grid:nth-child(' + id + ')');
       let upload = new tus.Upload(file, {
         endpoint: 'http://18.213.229.220:1080/files/',
@@ -211,14 +209,15 @@ const upload = () => {
           progressLength.innerHTML = '(' + id + '/' + filesList.length + ')';
           progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
           progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
-            clockFormat(secondsRemaining, 0) + ')';
+            clockFormat(secondsRemaining, 0);
           progress.setAttribute('value', percentage);
           progressBar.style.width = percentage + '%';
 
-          row = document.querySelector('.grid:nth-child(' + uploading + ')');
-          row.classList.replace('new', 'loading');
+          row = document.querySelector('.grid:nth-child(' + idUploading + ')');
+          if (row.className === 'grid new') row.classList.replace('new', 'loading');
 
           document.getElementById('icon-delete-' + (id - 1)).className = 'icon delete';
+          btnClear.setAttribute('disabled', 'true');
 
           if (!!percentage) {
             btnUpload.style.display = 'none';
@@ -227,16 +226,20 @@ const upload = () => {
         },
         onSuccess: () => {
           console.log('Download %s from %s', upload.file.name, upload.url);
-          progressSpeed.innerHTML = '';
+          progressSpeed.innerHTML = 'Upload complete';
           totalUploaded += fileUploaded;
           btnPause.style.display = 'none';
           btnUpload.style.display = 'flex';
+          uploadList.splice(0, 1);
 
-          if (uploading === filesList.length) btnUpload.setAttribute('disabled', 'true');
+          if (!uploadList.length) {
+            dropZone.classList.remove('disabled');
+            btnUpload.setAttribute('disabled', 'true');
+          }
 
           row.classList.replace('loading', 'success');
           id++;
-          uploading++;
+          idUploading++;
 
           startUpload();
         },
@@ -247,7 +250,9 @@ const upload = () => {
         btnPause.style.display = 'none';
         btnUpload.style.display = 'flex';
         row.classList.replace('loading', 'pause');
-        progressSpeed.innerHTML = '';
+        progressSpeed.innerHTML = 'Upload stopped';
+        document.getElementById('icon-delete-' + (id - 1)).className = 'icon delete active';
+        btnClear.removeAttribute('disabled');
       });
 
       btnUpload.addEventListener('click', () => {
@@ -255,10 +260,6 @@ const upload = () => {
         btnUpload.style.display = 'none';
         btnPause.style.display = 'flex';
         row.classList.replace('pause', 'loading');
-      });
-
-      btnClear.addEventListener('click', () => {
-        btnPause.click();
       });
 
       upload.findPreviousUploads().then((previousUploads) => {
@@ -280,16 +281,12 @@ const upload = () => {
         upload.start();
       });
 
-
       // upload.start();
-    } else {
-      uploadList = [];
-      dropZone.removeAttribute('disabled');
     }
   };
 
   startUpload();
-}
+};
 
 /**
  * Update file list
@@ -343,11 +340,11 @@ const updateFilesList = (file, index) => {
     if (iconDelete.className === 'icon delete active') {
       filesList.splice(index, 1);
       document.querySelector('.grid:nth-child(' + (index + 1) + ')').remove();
-      progressLength.innerHTML = '(' + uploading + '/' + filesList.length + ')';
+      progressLength.innerHTML = '(' + idUploading + '/' + filesList.length + ')';
       closeSortList();
     }
   });
-}
+};
 
 /**
  * Get size of file
@@ -362,7 +359,7 @@ const updateSize = (bytes) => {
   }
 
   return output;
-}
+};
 
 /**
  * Ellipsis in the middle of long text (Mac style)
@@ -382,7 +379,7 @@ const smartTrim = (fileName, maxLength) => {
   const rStrip = toRemove - lStrip;
 
   return fileName.substring(0, midpoint - lStrip) + '...' + fileName.substring(midpoint + rStrip);
-}
+};
 
 /**
  * Convert unix time to normal
@@ -416,7 +413,7 @@ const clockFormat = (seconds, decimals) => {
   );
 
   return result;
-}
+};
 
 /**
  * Open a dialog box to the user where they can select whether they want to resume an upload
@@ -439,7 +436,7 @@ const askToResumeUpload = (previousUploads) => {
   if (!isNaN(index) && previousUploads[index]) {
     return previousUploads[index];
   }
-}
+};
 
 /**
  * Adds a thumbnail for a file that is queued for upload
@@ -481,7 +478,7 @@ const updateThumbnail = (dropZoneElement, file) => {
   } else {
     thumbnailElement.style.backgroundImage = null;
   }
-}
+};
 
 /**
  * Cleaning progress bar
@@ -494,7 +491,18 @@ const cleanProgressBar = () => {
   progressSpeed.innerHTML = '';
   progress.setAttribute('value', '0');
   progressBar.style.width = '0%';
-}
+};
+
+/**
+ * Cleaning thumbnails in drop-zone
+ * @return {void}
+ */
+const cleanThumbnails = () => {
+  document.querySelectorAll('.drop-zone__thumb').forEach((el) => {
+    el.remove();
+  });
+  document.querySelector('.drop-zone__prompt').style.opacity = '1';
+};
 
 /**
  * Activation of buttons
@@ -504,7 +512,7 @@ const btnActivate = () => {
   btnThumbView.removeAttribute('disabled');
   btnSort.removeAttribute('disabled');
   btnClear.removeAttribute('disabled');
-}
+};
 
 /**
  * Close sort list
@@ -515,7 +523,7 @@ const closeSortList = () => {
     btnSort.click();
     isSortOpen = false;
   }
-}
+};
 
 /**
  * Sort by key
@@ -543,4 +551,4 @@ const sortBy = (key) => {
   for (let i = 0; i < filesList.length; i++) {
     updateFilesList(filesList[i], i);
   }
-}
+};
