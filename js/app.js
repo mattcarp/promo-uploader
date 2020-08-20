@@ -4,6 +4,7 @@ let totalUploaded = 0;
 let fileUploaded = 0;
 let idUploading = 0;
 let isSortOpen = false;
+const app = document.getElementById('promo-uploader')
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
 const btnPause = document.getElementById('btn-pause');
@@ -178,7 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnForStart();
   });
 
-  setTimeout(() => document.getElementById('promo-uploader').classList.remove('loading'), 200);
+  setTimeout(() => app.classList.remove('loading'), 200);
+});
+
+window.addEventListener('resize', () => {
+  app.classList.add('loading');
+  setTimeout(() => document.location.reload(true), 200);
 });
 
 /**
