@@ -23,15 +23,15 @@ const progressSize = document.getElementById('progress-size');
 const progressSpeed = document.getElementById('progress-speed');
 const progress = document.getElementById('progress');
 const progressBar = document.getElementById('progress-bar');
-const debugMode = false;
+const debugMode = true;
 
-/*
 const style = [
   'padding: 0.4rem 0.8rem;',
   'background: linear-gradient(#4560ad, #1139ad);',
   'font: 0.8rem/1 -apple-system, Roboto, Helvetica, Arial;',
   'color: #fff;'
 ].join('');
+/*
 fetch('http://18.213.229.220:3000/promo-uploader/version') // for @Andrew
   // fetch('/promo-uploader/version')
   .then((response) => response.text())
@@ -40,7 +40,8 @@ fetch('http://18.213.229.220:3000/promo-uploader/version') // for @Andrew
     console.log('%c%s', style, 'Uploader', 'v.' + version);
   });
 */
-document.getElementById('ver').innerHTML = 'v.0.0.5';
+const version = document.getElementById('ver').innerHTML = 'v.0.0.5';
+console.log('%c%s', style, 'Promo Uploader', version);
 
 // in case there are multiple drop zones...
 document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
@@ -74,6 +75,7 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
       btnActivate();
       cleanProgressBar();
       updateFilesList();
+      progressTotal.innerHTML = 'Ready for upload';
     }
   });
 
@@ -112,6 +114,8 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
       btnActivate();
       cleanProgressBar();
       updateFilesList();
+      progressTotal.innerHTML = 'Ready for upload';
+
       if (debugMode) console.log(`input el files`, inputElement.files);
     }
 
@@ -167,12 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnClear.addEventListener('click', () => {
     filesList = [];
-    idUploading = 0;
-    btnUpload.setAttribute('disabled', 'true');
-    btnSort.setAttribute('disabled', 'true');
-    cleanThumbnails();
-    cleanProgressBar();
+    totalSize = 0;
+    totalUploaded = 0;
     updateFilesList();
+    cleanThumbnails();
+    btnForStart();
   });
 
   setTimeout(() => document.getElementById('promo-uploader').classList.remove('loading'), 200);
@@ -186,95 +189,101 @@ const upload = () => {
   let startedAt = new Date();
 
   const startUpload = () => {
-      if (debugMode) console.log('id for uploading file', idUploading);
+    if (debugMode) console.log('id for uploading file', idUploading);
 
-      let file = filesList[idUploading].fileInfo;
-      let upload = new tus.Upload(file, {
-        endpoint: 'http://18.213.229.220:1080/files/',
-        retryDelays: [0, 3000],
-        metadata: {
-          filename: file.name,
-          filetype: file.type,
-        },
-        onError: (error) => {
-          filesList[idUploading].row = 'error';
+    let file = filesList[idUploading].fileInfo;
+    let upload = new tus.Upload(file, {
+      endpoint: 'http://18.213.229.220:1080/files/',
+      retryDelays: [0, 3000],
+      metadata: {
+        filename: file.name,
+        filetype: file.type,
+      },
+      onError: (error) => {
+        if (idUploading < filesList.length) {
           uploadComplete();
           upload.abort();
+          filesList[idUploading].row = 'error';
           progressTotal.innerHTML = 'Upload error';
 
           if (debugMode) console.log('Failed because: ' + error);
-        },
-        onProgress: (bytesUploaded) => {
-          if (!filesList[idUploading].uploaded) {
-            fileUploaded = bytesUploaded;
-            let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
-            let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
-            let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
-            let KbytesPerSecond = bytesPerSecond / 1000;
-            let remainingBytes = totalSize - totalUploaded - bytesUploaded;
-            let secondsRemaining = remainingBytes / bytesPerSecond;
+        }
+      },
+      onProgress: (bytesUploaded) => {
+        if (idUploading < filesList.length) {
+          fileUploaded = bytesUploaded;
+          let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
+          let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
+          let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
+          let KbytesPerSecond = bytesPerSecond / 1000;
+          let remainingBytes = totalSize - totalUploaded - bytesUploaded;
+          let secondsRemaining = remainingBytes / bytesPerSecond;
 
-            progressTotal.innerHTML = 'Total: ' + percentage + '%';
-            progressLength.innerHTML = '(' + (idUploading + 1) + '/' + filesList.length + ')';
-            progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
-            progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
-              clockFormat(secondsRemaining, 0);
-            progress.setAttribute('value', percentage);
-            progressBar.style.width = percentage + '%';
+          progressTotal.innerHTML = 'Total: ' + percentage + '%';
+          progressLength.innerHTML = '(' + (idUploading + 1) + '/' + filesList.length + ')';
+          progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
+          progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
+            clockFormat(secondsRemaining, 0);
+          progress.setAttribute('value', percentage);
+          progressBar.style.width = percentage + '%';
 
-            filesList[idUploading].row = 'loading';
-            updateFilesList();
-
-            document.getElementById('icon-delete-' + (idUploading)).className = 'icon delete';
-            btnClear.setAttribute('disabled', 'true');
-          }
-        },
-        onSuccess: () => {
-          if (debugMode) console.log('Download %s from %s', upload.file.name, upload.url);
-
-          totalUploaded += fileUploaded;
-          filesList[idUploading].row = 'success';
-          filesList[idUploading].uploaded = true;
+          filesList[idUploading].row = 'loading';
           updateFilesList();
-          idUploading++;
 
-          Object.keys(localStorage).map(key => {
-            if (JSON.parse(localStorage.getItem(key)).uploadUrl === upload.url) {
-              localStorage.removeItem(key);
-            }
-          });
+          document.getElementById('icon-delete-' + (idUploading)).className = 'icon delete';
+          btnClear.setAttribute('disabled', 'true');
 
-          if (idUploading === filesList.length) {
+          if (filesList[idUploading].uploaded) {
             uploadComplete();
-            upload.abort();
-          } else {
-            startUpload();
+            progressTotal.innerHTML = 'Upload checking';
           }
-        },
-      });
+        }
+      },
+      onSuccess: () => {
+        if (debugMode) console.log('Download %s from %s', upload.file.name, upload.url);
 
-      btnPause.addEventListener('click', () => {
-        upload.abort();
-        btnPause.style.display = 'none';
-        btnUnPause.style.display = 'flex';
-        filesList[idUploading].row = 'pause';
+        totalUploaded += fileUploaded;
+        filesList[idUploading].row = 'success';
+        filesList[idUploading].uploaded = true;
         updateFilesList();
-        cleanProgressBar();
-        progressTotal.innerHTML = 'Upload stopped';
-        btnClear.removeAttribute('disabled');
-      });
+        idUploading++;
 
-      btnUnPause.addEventListener('click', () => {
-        upload.start();
-        btnUnPause.style.display = 'none';
-        btnPause.style.display = 'flex';
-        filesList[idUploading].row = 'loading';
-        updateFilesList();
-        btnClear.setAttribute('disabled', 'true');
-        prevUpload(upload);
-      });
+        Object.keys(localStorage).map(key => {
+          if (JSON.parse(localStorage.getItem(key)).uploadUrl === upload.url) {
+            localStorage.removeItem(key);
+          }
+        });
 
+        if (idUploading === filesList.length) {
+          uploadComplete();
+          upload.abort();
+        } else {
+          if (idUploading < filesList.length) startUpload();
+        }
+      },
+    });
+
+    btnPause.addEventListener('click', () => {
+      upload.abort();
+      btnPause.style.display = 'none';
+      btnUnPause.style.display = 'flex';
+      filesList[idUploading].row = 'pause';
+      updateFilesList();
+      cleanProgressBar();
+      progressTotal.innerHTML = 'Upload stopped';
+      btnClear.removeAttribute('disabled');
+    });
+
+    btnUnPause.addEventListener('click', () => {
+      btnUnPause.style.display = 'none';
+      btnPause.style.display = 'flex';
+      filesList[idUploading].row = 'loading';
+      updateFilesList();
+      btnClear.setAttribute('disabled', 'true');
       prevUpload(upload);
+    });
+
+    prevUpload(upload);
   };
 
   startUpload();
@@ -497,8 +506,10 @@ const btnActivate = () => {
  */
 const btnForStart = () => {
   idUploading = 0;
+  dropZone.classList.remove('disabled');
   btnPause.style.display = 'none';
   btnUnPause.style.display = 'none';
+  btnUpload.style.display = 'flex';
   btnUpload.setAttribute('disabled', 'true');
   btnListView.setAttribute('disabled', 'true');
   btnThumbView.setAttribute('disabled', 'true');
@@ -530,7 +541,7 @@ const uploadComplete = () => {
   progressTotal.innerHTML = 'Upload complete';
   btnSort.removeAttribute('disabled');
   btnClear.removeAttribute('disabled');
-}
+};
 
 /**
  * Sort by key
