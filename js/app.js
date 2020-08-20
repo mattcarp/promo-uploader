@@ -4,7 +4,7 @@ let totalUploaded = 0;
 let fileUploaded = 0;
 let idUploading = 0;
 let isSortOpen = false;
-const app = document.getElementById('promo-uploader')
+const app = document.getElementById('promo-uploader');
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
 const btnPause = document.getElementById('btn-pause');
@@ -32,17 +32,13 @@ const style = [
   'font: 0.8rem/1 -apple-system, Roboto, Helvetica, Arial;',
   'color: #fff;'
 ].join('');
-/*
-fetch('http://18.213.229.220:3000/promo-uploader/version') // for @Andrew
-  // fetch('/promo-uploader/version')
+// fetch('http://18.213.229.220:3000/promo-uploader/version') // for @Andrew
+fetch('/promo-uploader/version')
   .then((response) => response.text())
   .then((version) => {
-    // verApp.innerHTML = version;
+    document.getElementById('ver').innerHTML = 'v.' + version;
     console.log('%c%s', style, 'Uploader', 'v.' + version);
   });
-*/
-const version = document.getElementById('ver').innerHTML = 'v.0.0.5';
-console.log('%c%s', style, 'Promo Uploader', version);
 
 // in case there are multiple drop zones...
 document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
@@ -217,33 +213,33 @@ const upload = () => {
         }
       },
       onProgress: (bytesUploaded) => {
-        if (idUploading < filesList.length && !filesList[idUploading].uploaded) {
-          fileUploaded = bytesUploaded;
-          let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
-          let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
-          let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
-          let KbytesPerSecond = bytesPerSecond / 1000;
-          let remainingBytes = totalSize - totalUploaded - bytesUploaded;
-          let secondsRemaining = remainingBytes / bytesPerSecond;
+        if (!filesList[idUploading].uploaded) {
+          if (idUploading < filesList.length) {
+            fileUploaded = bytesUploaded;
+            let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
+            let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
+            let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
+            let KbytesPerSecond = bytesPerSecond / 1000;
+            let remainingBytes = totalSize - totalUploaded - bytesUploaded;
+            let secondsRemaining = remainingBytes / bytesPerSecond;
 
-          progressTotal.innerHTML = 'Total: ' + percentage + '%';
-          progressLength.innerHTML = '(' + (idUploading + 1) + '/' + filesList.length + ')';
-          progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
-          progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
-            clockFormat(secondsRemaining, 0);
-          progress.setAttribute('value', percentage);
-          progressBar.style.width = percentage + '%';
+            progressTotal.innerHTML = 'Total: ' + percentage + '%';
+            progressLength.innerHTML = '(' + (idUploading + 1) + '/' + filesList.length + ')';
+            progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
+            progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
+              clockFormat(secondsRemaining, 0);
+            progress.setAttribute('value', percentage);
+            progressBar.style.width = percentage + '%';
 
-          filesList[idUploading].row = 'loading';
-          updateFilesList();
+            filesList[idUploading].row = 'loading';
+            updateFilesList();
 
-          document.getElementById('icon-delete-' + (idUploading)).className = 'icon delete';
-          btnClear.setAttribute('disabled', 'true');
-
-          if (filesList[idUploading].uploaded) {
-            uploadComplete();
-            progressTotal.innerHTML = 'Upload checking';
+            document.getElementById('icon-delete-' + (idUploading)).className = 'icon delete';
+            btnClear.setAttribute('disabled', 'true');
           }
+        } else {
+          uploadComplete();
+          progressTotal.innerHTML = 'Upload checking';
         }
       },
       onSuccess: () => {
