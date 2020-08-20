@@ -344,6 +344,7 @@ const updateFilesList = () => {
 
     iconDelete.addEventListener('click', () => {
       filesList.splice(i, 1);
+      idUploading--;
       updateFilesList();
     });
   }
