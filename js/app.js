@@ -23,7 +23,7 @@ const progressSize = document.getElementById('progress-size');
 const progressSpeed = document.getElementById('progress-speed');
 const progress = document.getElementById('progress');
 const progressBar = document.getElementById('progress-bar');
-const debugMode = true;
+const debugMode = false;
 
 const style = [
   'padding: 0.4rem 0.8rem;',
