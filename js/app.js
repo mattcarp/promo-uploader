@@ -185,8 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('resize', () => {
-  app.classList.add('loading');
-  setTimeout(() => document.location.reload(true), 200);
+  setTimeout(() => updateFilesList(), 200);
 });
 
 /**
