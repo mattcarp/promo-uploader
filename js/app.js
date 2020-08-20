@@ -101,6 +101,8 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
       cleanThumbnails();
       inputElement.files = e.dataTransfer.files;
 
+      // if (filesList.length !== 0) idUploading = filesList.length - 1;
+
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
         updateThumbnail(dropZoneElement, e.dataTransfer.files[i]);
         filesList.push({
@@ -216,7 +218,7 @@ const upload = () => {
         }
       },
       onProgress: (bytesUploaded) => {
-        if (idUploading < filesList.length) {
+        if (idUploading < filesList.length && !filesList[idUploading].uploaded) {
           fileUploaded = bytesUploaded;
           let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
           let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
@@ -262,6 +264,7 @@ const upload = () => {
 
         if (idUploading === filesList.length) {
           uploadComplete();
+          btnUpload.setAttribute('disabled', 'true');
           upload.abort();
         } else {
           if (idUploading < filesList.length) startUpload();
