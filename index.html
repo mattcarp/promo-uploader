@@ -12,8 +12,9 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+<h1>Promo Uploader <span id="ver"></span></h1>
 
-<div class="super-uploader">
+<div id="promo-uploader" class="promo-uploader loading">
   <section id="drop-zone">
     <p class="drop-zone__prompt">
       <i class="icon folder"></i>
@@ -33,24 +34,30 @@
       Pause
     </button>
 
+    <button id="btn-un-pause" class="upload">
+      <i class="icon upload"></i>
+      Unpause
+    </button>
+
     <div class="options">
       <button id='btn-list-view'>
         <i class="icon list"></i>
       </button>
+
       <button id='btn-thumb-view'>
         <i class="icon thumb"></i>
       </button>
-      <nav>
-        <input id='btn-sort' type='checkbox'>
-        <label for='btn-sort'>
+
+      <div class="dropdown">
+        <button id="btn-sort">
           <i class="icon sort"></i>
-        </label>
-        <ul>
-          <li id='sort-name'>By name ↓</li>
-          <li id='sort-size'>By size</li>
-          <li id='sort-date'>By date</li>
+        </button>
+        <ul id="dropdown" class="dropdown-content">
+          <li id="sort-name">By name ↓</li>
+          <li id="sort-size">By size</li>
+          <li id="sort-date">By date</li>
         </ul>
-      </nav>
+      </div>
     </div>
 
     <div class="spacer"></div>
@@ -77,7 +84,6 @@
     </progress>
   </footer>
 </div>
-
 
 <script src="js/lib/tus.min.js"></script>
 <script src="js/app.js"></script>

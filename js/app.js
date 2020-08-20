@@ -1,16 +1,17 @@
 let filesList = [];
-let uploadList = [];
 let totalSize = 0;
 let totalUploaded = 0;
 let fileUploaded = 0;
-let idUploading = 1;
+let idUploading = 0;
 let isSortOpen = false;
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
 const btnPause = document.getElementById('btn-pause');
+const btnUnPause = document.getElementById('btn-un-pause');
 const btnListView = document.getElementById('btn-list-view');
 const btnThumbView = document.getElementById('btn-thumb-view');
 const btnSort = document.getElementById('btn-sort');
+const dropdown = document.getElementById('dropdown');
 const sortName = document.getElementById('sort-name');
 const sortSize = document.getElementById('sort-size');
 const sortDate = document.getElementById('sort-date');
@@ -23,13 +24,6 @@ const progressSpeed = document.getElementById('progress-speed');
 const progress = document.getElementById('progress');
 const progressBar = document.getElementById('progress-bar');
 const debugMode = false;
-
-btnPause.style.display = 'none';
-btnUpload.setAttribute('disabled', 'true');
-btnListView.setAttribute('disabled', 'true');
-btnThumbView.setAttribute('disabled', 'true');
-btnSort.setAttribute('disabled', 'true');
-btnClear.setAttribute('disabled', 'true');
 
 /*
 const style = [
@@ -46,6 +40,7 @@ fetch('http://18.213.229.220:3000/promo-uploader/version') // for @Andrew
     console.log('%c%s', style, 'Uploader', 'v.' + version);
   });
 */
+document.getElementById('ver').innerHTML = 'v.0.0.5';
 
 // in case there are multiple drop zones...
 document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
@@ -62,19 +57,23 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
   dropZoneElement.addEventListener('change', (e) => {
     const dropZoneFile = /**HTMLInputElement*/e.target;
 
+    localStorage.clear();
+
     if (inputElement.files.length && dropZone.className !== 'disabled') {
       for (let i = 0; i < dropZoneFile.files.length; i++) {
         updateThumbnail(dropZoneElement, inputElement.files[i]);
-        updateFilesList(dropZoneFile.files[i], i);
-        filesList.push(dropZoneFile.files[i]);
-        uploadList.push(dropZoneFile.files[i]);
+        filesList.push({
+          'row': 'new',
+          'fileInfo': dropZoneFile.files[i],
+          'uploaded': false,
+        });
         totalSize += dropZoneFile.files[i].size;
       }
 
       btnUpload.removeAttribute('disabled');
       btnActivate();
-      closeSortList();
       cleanProgressBar();
+      updateFilesList();
     }
   });
 
@@ -93,7 +92,7 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
 
   dropZoneElement.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (debugMode) console.log(`drop event`, e.dataTransfer.files);
+    localStorage.clear();
 
     if (e.dataTransfer.files.length && dropZone.className !== 'disabled') {
       cleanThumbnails();
@@ -101,28 +100,36 @@ document.querySelectorAll('.drop-zone__input').forEach((inputElement) => {
 
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
         updateThumbnail(dropZoneElement, e.dataTransfer.files[i]);
-        updateFilesList(e.dataTransfer.files[i], i);
-        filesList.push(e.dataTransfer.files[i]);
-        uploadList.push(e.dataTransfer.files[i]);
+        filesList.push({
+          'row': 'new',
+          'fileInfo': e.dataTransfer.files[i],
+          'uploaded': false,
+        });
         totalSize += e.dataTransfer.files[i].size;
       }
 
       btnUpload.removeAttribute('disabled');
       btnActivate();
-      closeSortList();
       cleanProgressBar();
+      updateFilesList();
       if (debugMode) console.log(`input el files`, inputElement.files);
     }
 
     dropZoneElement.classList.remove('drop-zone--over');
+
+    if (debugMode) console.log(`drop event`, e.dataTransfer.files);
   });
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  btnForStart();
+
   btnUpload.addEventListener('click', () => {
     dropZone.classList.add('disabled');
-    closeSortList();
     upload();
+    btnUpload.style.display = 'none';
+    btnPause.style.display = 'flex';
+    btnSort.setAttribute('disabled', 'true');
   });
 
   btnListView.addEventListener('click', () => {
@@ -141,6 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnSort.addEventListener('click', () => {
     isSortOpen = !isSortOpen;
+    isSortOpen
+      ? dropdown.style.display = 'block'
+      : dropdown.style.display = 'none';
   });
 
   sortName.addEventListener('click', () => {
@@ -156,16 +166,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnClear.addEventListener('click', () => {
-    btnPause.click();
-    list.innerHTML = '';
     filesList = [];
-    uploadList = [];
+    idUploading = 0;
     btnUpload.setAttribute('disabled', 'true');
-    btnClear.setAttribute('disabled', 'true');
+    btnSort.setAttribute('disabled', 'true');
     cleanThumbnails();
     cleanProgressBar();
-    closeSortList();
+    updateFilesList();
   });
+
+  setTimeout(() => document.getElementById('promo-uploader').classList.remove('loading'), 200);
 });
 
 /**
@@ -173,116 +183,98 @@ document.addEventListener('DOMContentLoaded', () => {
  * @return {void}
  */
 const upload = () => {
-  let id = 1;
   let startedAt = new Date();
 
   const startUpload = () => {
-    if (uploadList.length) {
-      let file = uploadList[0];
-      let row = document.querySelector('.grid:nth-child(' + id + ')');
+      if (debugMode) console.log('id for uploading file', idUploading);
+
+      let file = filesList[idUploading].fileInfo;
       let upload = new tus.Upload(file, {
         endpoint: 'http://18.213.229.220:1080/files/',
-        retryDelays: [0, 3000, 5000, 10000, 20000],
+        retryDelays: [0, 3000],
         metadata: {
           filename: file.name,
-          filetype: file.type
+          filetype: file.type,
         },
-        parallelUploads: 1,
         onError: (error) => {
-          console.log('Failed because: ' + error);
+          filesList[idUploading].row = 'error';
+          uploadComplete();
+          upload.abort();
+          progressTotal.innerHTML = 'Upload error';
 
-          btnPause.style.display = 'none';
-          btnUpload.style.display = 'flex';
-          btnUpload.setAttribute('disabled', 'true');
-          row.className = 'grid error';
+          if (debugMode) console.log('Failed because: ' + error);
         },
         onProgress: (bytesUploaded) => {
-          fileUploaded = bytesUploaded;
-          let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
-          let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
-          let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
-          let KbytesPerSecond = bytesPerSecond / 1000;
-          let remainingBytes = totalSize - totalUploaded - bytesUploaded;
-          let secondsRemaining = remainingBytes / bytesPerSecond;
+          if (!filesList[idUploading].uploaded) {
+            fileUploaded = bytesUploaded;
+            let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
+            let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
+            let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
+            let KbytesPerSecond = bytesPerSecond / 1000;
+            let remainingBytes = totalSize - totalUploaded - bytesUploaded;
+            let secondsRemaining = remainingBytes / bytesPerSecond;
 
-          progressTotal.innerHTML = 'Total: ' + percentage + '%';
-          progressLength.innerHTML = '(' + id + '/' + filesList.length + ')';
-          progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
-          progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
-            clockFormat(secondsRemaining, 0);
-          progress.setAttribute('value', percentage);
-          progressBar.style.width = percentage + '%';
+            progressTotal.innerHTML = 'Total: ' + percentage + '%';
+            progressLength.innerHTML = '(' + (idUploading + 1) + '/' + filesList.length + ')';
+            progressSize.innerHTML = updateSize(totalUploaded + bytesUploaded) + '/' + updateSize(totalSize);
+            progressSpeed.innerHTML = 'Speed: ' + KbytesPerSecond.toFixed(0) + 'Kb/sec, Time left: ' +
+              clockFormat(secondsRemaining, 0);
+            progress.setAttribute('value', percentage);
+            progressBar.style.width = percentage + '%';
 
-          row = document.querySelector('.grid:nth-child(' + idUploading + ')');
-          if (row.className === 'grid new') row.classList.replace('new', 'loading');
+            filesList[idUploading].row = 'loading';
+            updateFilesList();
 
-          document.getElementById('icon-delete-' + (id - 1)).className = 'icon delete';
-          btnClear.setAttribute('disabled', 'true');
-
-          if (!!percentage) {
-            btnUpload.style.display = 'none';
-            btnPause.style.display = 'flex';
+            document.getElementById('icon-delete-' + (idUploading)).className = 'icon delete';
+            btnClear.setAttribute('disabled', 'true');
           }
         },
         onSuccess: () => {
-          console.log('Download %s from %s', upload.file.name, upload.url);
-          progressSpeed.innerHTML = 'Upload complete';
+          if (debugMode) console.log('Download %s from %s', upload.file.name, upload.url);
+
           totalUploaded += fileUploaded;
-          btnPause.style.display = 'none';
-          btnUpload.style.display = 'flex';
-          uploadList.splice(0, 1);
-
-          if (!uploadList.length) {
-            dropZone.classList.remove('disabled');
-            btnUpload.setAttribute('disabled', 'true');
-          }
-
-          row.classList.replace('loading', 'success');
-          id++;
+          filesList[idUploading].row = 'success';
+          filesList[idUploading].uploaded = true;
+          updateFilesList();
           idUploading++;
 
-          startUpload();
+          Object.keys(localStorage).map(key => {
+            if (JSON.parse(localStorage.getItem(key)).uploadUrl === upload.url) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          if (idUploading === filesList.length) {
+            uploadComplete();
+            upload.abort();
+          } else {
+            startUpload();
+          }
         },
       });
 
       btnPause.addEventListener('click', () => {
         upload.abort();
         btnPause.style.display = 'none';
-        btnUpload.style.display = 'flex';
-        row.classList.replace('loading', 'pause');
-        progressSpeed.innerHTML = 'Upload stopped';
-        document.getElementById('icon-delete-' + (id - 1)).className = 'icon delete active';
+        btnUnPause.style.display = 'flex';
+        filesList[idUploading].row = 'pause';
+        updateFilesList();
+        cleanProgressBar();
+        progressTotal.innerHTML = 'Upload stopped';
         btnClear.removeAttribute('disabled');
       });
 
-      btnUpload.addEventListener('click', () => {
+      btnUnPause.addEventListener('click', () => {
         upload.start();
-        btnUpload.style.display = 'none';
+        btnUnPause.style.display = 'none';
         btnPause.style.display = 'flex';
-        row.classList.replace('pause', 'loading');
+        filesList[idUploading].row = 'loading';
+        updateFilesList();
+        btnClear.setAttribute('disabled', 'true');
+        prevUpload(upload);
       });
 
-      upload.findPreviousUploads().then((previousUploads) => {
-        // previousUploads is an array containing details about the previously started uploads.
-        // The objects in the array have following properties:
-        // - size: The upload's size in bytes
-        // - metadata: The metadata associated with the upload during its creation
-        // - creationTime: The timestamp when the upload was created
-
-        // We ask the end user if they want to resume one of those uploads or start a new one.
-        const chosenUpload = askToResumeUpload(previousUploads);
-
-        // If an upload has been chosen to be resumed, instruct the upload object to do so.
-        if (chosenUpload) {
-          upload.resumeFromPreviousUpload(chosenUpload);
-        }
-
-        // Finally start the upload requests.
-        upload.start();
-      });
-
-      // upload.start();
-    }
+      prevUpload(upload);
   };
 
   startUpload();
@@ -290,60 +282,64 @@ const upload = () => {
 
 /**
  * Update file list
- * @param {File} file
- * @param {number} index
  * @return {void}
  */
-const updateFilesList = (file, index) => {
-  const grid = document.createElement('div');
-  const cellState = document.createElement('div');
-  const cellFileName = document.createElement('div');
-  const cellFileSize = document.createElement('div');
-  const cellDelete = document.createElement('div');
-  const iconLoader = document.createElement('i');
-  const iconSuccess = document.createElement('i');
-  const iconInfo = document.createElement('i');
-  const iconWarn = document.createElement('i');
-  const iconDelete = document.createElement('i');
+const updateFilesList = () => {
+  list.innerHTML = '';
+  closeSortList();
 
-  grid.classList.add('grid');
-  grid.classList.add('new');
-  cellFileName.innerHTML = smartTrim(file.name, (list.offsetWidth - 164) / 10);
-  cellFileSize.innerHTML = updateSize(file.size);
+  for (let i = 0; i < filesList.length; i++) {
+    const grid = document.createElement('div');
+    const cellState = document.createElement('div');
+    const cellFileName = document.createElement('div');
+    const cellFileSize = document.createElement('div');
+    const cellDelete = document.createElement('div');
+    const iconLoader = document.createElement('i');
+    const iconSuccess = document.createElement('i');
+    const iconInfo = document.createElement('i');
+    const iconWarn = document.createElement('i');
+    const iconDelete = document.createElement('i');
 
-  iconLoader.classList.add('icon');
-  iconLoader.classList.add('loader');
-  cellState.appendChild(iconLoader);
-  iconSuccess.classList.add('icon');
-  iconSuccess.classList.add('success');
-  cellState.appendChild(iconSuccess);
-  iconInfo.classList.add('icon');
-  iconInfo.classList.add('info');
-  cellState.appendChild(iconInfo);
-  iconWarn.classList.add('icon');
-  iconWarn.classList.add('warn');
-  cellState.appendChild(iconWarn);
-  iconDelete.classList.add('icon');
-  iconDelete.classList.add('delete');
-  iconDelete.classList.add('active');
-  iconDelete.id = 'icon-delete-' + index;
-  cellDelete.appendChild(iconDelete);
+    grid.classList.add('grid');
+    if (filesList[i].row === 'new') grid.classList.add('new');
+    if (filesList[i].row === 'loading') grid.classList.add('loading');
+    if (filesList[i].row === 'success') grid.classList.add('success');
+    if (filesList[i].row === 'pause') grid.classList.add('pause');
+    if (filesList[i].row === 'error') grid.classList.add('error');
+    cellFileName.innerHTML = smartTrim(filesList[i].fileInfo.name, (list.offsetWidth - 164) / 10);
+    cellFileSize.innerHTML = updateSize(filesList[i].fileInfo.size);
 
-  grid.appendChild(cellState);
-  grid.appendChild(cellFileName);
-  grid.appendChild(cellFileSize);
-  grid.appendChild(cellDelete);
+    iconLoader.classList.add('icon');
+    iconLoader.classList.add('loader');
+    cellState.appendChild(iconLoader);
+    iconSuccess.classList.add('icon');
+    iconSuccess.classList.add('success');
+    cellState.appendChild(iconSuccess);
+    iconInfo.classList.add('icon');
+    iconInfo.classList.add('info');
+    cellState.appendChild(iconInfo);
+    iconWarn.classList.add('icon');
+    iconWarn.classList.add('warn');
+    cellState.appendChild(iconWarn);
+    iconDelete.classList.add('icon');
+    iconDelete.classList.add('delete');
+    iconDelete.id = 'icon-delete-' + i;
+    cellDelete.appendChild(iconDelete);
 
-  list.appendChild(grid);
+    grid.appendChild(cellState);
+    grid.appendChild(cellFileName);
+    grid.appendChild(cellFileSize);
+    grid.appendChild(cellDelete);
 
-  iconDelete.addEventListener('click', () => {
-    if (iconDelete.className === 'icon delete active') {
-      filesList.splice(index, 1);
-      document.querySelector('.grid:nth-child(' + (index + 1) + ')').remove();
-      progressLength.innerHTML = '(' + idUploading + '/' + filesList.length + ')';
-      closeSortList();
-    }
-  });
+    list.appendChild(grid);
+
+    iconDelete.addEventListener('click', () => {
+      filesList.splice(i, 1);
+      updateFilesList();
+    });
+  }
+
+  if (!filesList.length) cleanProgressBar();
 };
 
 /**
@@ -416,35 +412,13 @@ const clockFormat = (seconds, decimals) => {
 };
 
 /**
- * Open a dialog box to the user where they can select whether they want to resume an upload
- * or instead create a new one
- * @param {any []} previousUploads to be uploaded
- * @return {null | number}
- */
-const askToResumeUpload = (previousUploads) => {
-  if (previousUploads.length === 0) return null;
-
-  let text = 'You tried to upload this file previously at these times:\n\n';
-  previousUploads.forEach((previousUpload, index) => {
-    text += '[' + index + '] ' + previousUpload.creationTime + '\n';
-  });
-  text += '\nEnter the corresponding number to resume an upload or press Cancel to start a new upload';
-
-  const answer = prompt(text);
-  const index = parseInt(answer, 10);
-
-  if (!isNaN(index) && previousUploads[index]) {
-    return previousUploads[index];
-  }
-};
-
-/**
  * Adds a thumbnail for a file that is queued for upload
  * @param {Element} dropZoneElement the html element for the drop area
  * @param {File} file the file to be used as the thumbnail
  */
 const updateThumbnail = (dropZoneElement, file) => {
   let thumbnailElement = dropZoneElement.querySelector('.drop-zone__thumb');
+
   dropZoneElement.querySelector('.drop-zone__prompt').style.opacity = '0';
   thumbnailElement = document.createElement('div');
   thumbnailElement.classList.add('drop-zone__thumb');
@@ -491,6 +465,8 @@ const cleanProgressBar = () => {
   progressSpeed.innerHTML = '';
   progress.setAttribute('value', '0');
   progressBar.style.width = '0%';
+
+  if (!filesList.length) btnForStart();
 };
 
 /**
@@ -502,6 +478,7 @@ const cleanThumbnails = () => {
     el.remove();
   });
   document.querySelector('.drop-zone__prompt').style.opacity = '1';
+  dropZone.classList.remove('disabled');
 };
 
 /**
@@ -512,6 +489,21 @@ const btnActivate = () => {
   btnThumbView.removeAttribute('disabled');
   btnSort.removeAttribute('disabled');
   btnClear.removeAttribute('disabled');
+};
+
+/**
+ * Activation/Disabled buttons for start
+ * @return {void}
+ */
+const btnForStart = () => {
+  idUploading = 0;
+  btnPause.style.display = 'none';
+  btnUnPause.style.display = 'none';
+  btnUpload.setAttribute('disabled', 'true');
+  btnListView.setAttribute('disabled', 'true');
+  btnThumbView.setAttribute('disabled', 'true');
+  btnSort.setAttribute('disabled', 'true');
+  btnClear.setAttribute('disabled', 'true');
 };
 
 /**
@@ -526,6 +518,21 @@ const closeSortList = () => {
 };
 
 /**
+ * Upload complete
+ * @return {void}
+ */
+const uploadComplete = () => {
+  btnPause.style.display = 'none';
+  btnUnPause.style.display = 'none';
+  btnUpload.style.display = 'flex';
+  cleanThumbnails();
+  cleanProgressBar();
+  progressTotal.innerHTML = 'Upload complete';
+  btnSort.removeAttribute('disabled');
+  btnClear.removeAttribute('disabled');
+}
+
+/**
  * Sort by key
  * @param {string} key
  * @return {void}
@@ -533,22 +540,43 @@ const closeSortList = () => {
 const sortBy = (key) => {
   filesList = filesList.sort((a, b) => {
     if (key === 'name') {
-      if (a.name > b.name) return 1;
-      if (b.name > a.name) return -1;
+      if (a.fileInfo.name > b.fileInfo.name) return 1;
+      if (b.fileInfo.name > a.fileInfo.name) return -1;
       return 0;
     } else if (key === 'size') {
-      if (a.size > b.size) return 1;
-      if (b.size > a.size) return -1;
+      if (a.fileInfo.size > b.fileInfo.size) return 1;
+      if (b.fileInfo.size > a.fileInfo.size) return -1;
       return 0;
     } else if (key === 'lastModified') {
-      if (a.lastModified > b.lastModified) return 1;
-      if (b.lastModified > a.lastModified) return -1;
+      if (a.fileInfo.lastModified > b.fileInfo.lastModified) return 1;
+      if (b.fileInfo.lastModified > a.fileInfo.lastModified) return -1;
       return 0;
     }
   });
-  list.innerHTML = '';
 
-  for (let i = 0; i < filesList.length; i++) {
-    updateFilesList(filesList[i], i);
+  let i = 0;
+  while (i < filesList.length) {
+    idUploading = i;
+    if (!filesList[i].uploaded) break;
+    i++;
   }
+
+  updateFilesList();
+};
+
+/**
+ * If an upload has been chosen to be resumed
+ * @param {any} upload
+ * @return {void}
+ */
+const prevUpload = (upload) => {
+  upload.findPreviousUploads().then((previousUploads) => {
+    if (previousUploads && previousUploads.length) {
+      for (const item of previousUploads) {
+        upload.resumeFromPreviousUpload(item);
+      }
+    }
+    // Finally start the upload requests.
+    upload.start();
+  });
 };

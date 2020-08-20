@@ -1,3 +1,12 @@
+@mixin before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  content: '';
+}
+
 * {
   box-sizing: border-box;
 }
@@ -12,31 +21,64 @@ body {
 }
 
 body {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
   font: normal 16px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding: 20px;
   background-color: lightgrey;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+
+  h1 {
+    font-size: 24px;
+    color: #555;
+
+    span {
+      font-size: 12px;
+      font-weight: normal;
+    }
+  }
 }
 
-.super-uploader {
+.promo-uploader {
   // Layout
   display: grid;
   grid-template-columns: auto;
   grid-template-rows: [row1] 100px [row2] 38px [row3] 1fr [row4] 40px [row5];
   grid-template-areas: 'section' 'header' 'main' 'footer';
-  height: 100%;
   width: 100%;
   min-width: 500px;
+  max-width: 640px; // for demo (need to be commented out for the project)
+  height: 100%;
   min-height: 240px;
-  max-height: 440px; // for demo
-  max-width: 640px; // for demo
+  max-height: 440px; // for demo (need to be commented out for the project)
   padding: 20px;
-  border: 1px solid #CFCFCF;
+  border: 1px solid #cfcfcf;
   background-color: white;
+
+  &.loading {
+    position: relative;
+
+    &:before {
+      @include before;
+      z-index: 5;
+      background-color: white;
+    }
+
+    &:after {
+      position: absolute;
+      z-index: 6;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      content: '';
+      transform: translate(-50%, -50%);
+      background: url('../assets/icons.svg#icon-loader') top left no-repeat;
+    }
+  }
 
   section {
     grid-area: section;
@@ -51,7 +93,6 @@ body {
 
   main {
     overflow-y: auto;
-
     grid-area: main;
     grid-row: row3 / row4;
   }
@@ -61,53 +102,51 @@ body {
     grid-row: row4 / row5;
   }
 
-
   // Elements
   section {
     position: relative;
+    overflow: hidden;
     width: 100%;
     margin: 0 0 6px;
+    cursor: pointer;
     transition: all 0.3s ease-out;
     animation-name: fadeInDown;
     animation-duration: 0.5s;
     animation-fill-mode: both;
+    text-align: center;
     border-width: 1px;
     border-style: dashed;
     border-color: #93979a;
-    cursor: pointer;
-    background: rgb(231, 230, 220);
     background: linear-gradient(0deg, rgba(231, 230, 220, 1) 0%, rgba(248, 246, 243, 1) 100%);
-    overflow: hidden;
-    text-align: center;
 
     .drop-zone__prompt {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
       margin: 0;
+      transform: translate(-50%, -50%);
     }
 
     .drop-zone__thumb {
+      position: relative;
       display: inline-block;
+      overflow: hidden;
       width: 110px;
       height: 90px;
       margin: 0 2px;
-      overflow: hidden;
       background-repeat: no-repeat;
       background-position-x: center;
       background-size: contain;
-      position: relative;
 
       &:after {
         position: absolute;
         bottom: 0;
         left: 50%;
+        width: 100%;
         padding: 2px;
         content: attr(data-label);
         transform: translateX(-50%);
         font-size: 11px;
-        width: 100%;
         text-align: center;
       }
     }
@@ -122,7 +161,7 @@ body {
 
     &.drop-zone--over {
       border-color: white;
-      background: #0F7FC4;
+      background: #0f7fc4;
 
       p {
         color: white;
@@ -138,15 +177,10 @@ body {
 
     &.disabled {
       &:before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background-color: rgba(255, 255, 255, 0.7);
+        @include before;
         z-index: 10;
         cursor: default;
+        background-color: rgba(255, 255, 255, 0.7);
       }
     }
   }
@@ -169,8 +203,8 @@ body {
     }
 
     .options {
-      margin: 0 10px;
       display: flex;
+      margin: 0 10px;
 
       .icon {
         margin: 0;
@@ -183,26 +217,27 @@ body {
   }
 
   main {
-    border: 1px solid #CFCFCF;
+    border: 1px solid #cfcfcf;
 
     .grid {
       display: grid;
       grid-template-columns: 28px 1fr 110px 28px;
-      border-bottom: 1px solid #CFCFCF;
       align-items: center;
       height: 26px;
+      border-bottom: 1px solid #cfcfcf;
 
       & > div {
+        position: relative;
         padding: 0 4px;
 
         &:nth-child(3) {
-          text-align: right;
           padding-right: 10px;
+          text-align: right;
         }
 
         .icon {
-          margin: 0;
           display: block;
+          margin: 0;
         }
       }
 
@@ -216,7 +251,7 @@ body {
       }
 
       &.loading {
-        background-color: #99D8FF;
+        background-color: #99d8ff;
 
         .success,
         .info,
@@ -227,10 +262,15 @@ body {
         .loader {
           display: block;
         }
+
+        & > div:nth-child(4):before {
+          @include before;
+          background-color: rgba(153, 216, 255, 0.5);
+        }
       }
 
       &.success {
-        background-color: #EAFFF4;
+        background-color: #eafff4;
 
         .loader,
         .info,
@@ -280,11 +320,11 @@ body {
       grid-template-rows: auto;
 
       .grid {
+        position: relative;
         display: block;
         width: 116px;
         height: 120px;
-        border-right: 1px solid #CFCFCF;
-        position: relative;
+        border-right: 1px solid #cfcfcf;
 
         & > div {
           &:nth-child(1) {
@@ -292,19 +332,22 @@ body {
             top: 0;
             left: 0;
           }
+
           &:nth-child(2) {
             position: absolute;
             right: 0;
-            left: 0;
             bottom: 0;
+            left: 0;
             overflow: hidden;
+            text-align: center;
             white-space: nowrap;
             text-overflow: ellipsis;
-            text-align: center;
           }
+
           &:nth-child(3) {
             display: none;
           }
+
           &:nth-child(4) {
             position: absolute;
             top: 0;
@@ -313,12 +356,12 @@ body {
         }
 
         &:before {
-          content: '';
-          background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABaCAMAAAAsLeDlAAAAZlBMVEVHcEzX19fk5OSDg4PT09PS0tLLy8vT09PR0dHMzMzm5ubd3d3Dw8Pc3NyYmJjBwcGgoKC2trb4+PjLy8v19fXJycnS0tLz8/P6+vrv7+/4+PjZ2dnm5ubKysrf39/FxcXPz8+4uLiGMS1tAAAAE3RSTlMAZgr+9OCSghSnKUfurfXVeZe/KKurDwAAAZ9JREFUWMPtmGlzgyAQQJUkRjzTIho5XPz/f7KoMclUbPFoJ53yVD7s7DwXPEA9ryM8n5LTQigOvQkhJqKqlyEIDlGIPot4VWj6xg5W8QSnaWwWLYDVJQAc/V1EBBKDiK2oSAKOox1ElMgkSeMIbe6aBApweo+2iiihUkF73C7SfQNCkzR8ErGrNcNoVhyAEEmJAkh1Tf1AIVwKa5r6VhKBEarvy9jvyCmlYLkDH0piohwsesORF0jtoLJvrbiLikI/cKLWmxBw9gKikffme+RDxPTAsq65ljfREp5ED15PpF5OVDqREznRr4lKjSKWr1roDrPore0AVVrBu5M2ZtFBk7V8wRLLMJdqkZ/3ooZZUzCjCPl5dsigKTahRR6K40vWiu2ibuq/5E21h0jP/Xwf0YoV27yocCInciIncqK/KBJcKS6+CEwSzKJmWL80s4FJglkkxpWQmAlMEmZEfMzjM4FJwoxIjXlqJjBJ+GnRbl3bbbB3u/z73ZDu6XciJ/pfohf7qAn4poK6n3UDERasqFYjgvGXNgrocT0qiNAH7+XXet+PU9EAAAAASUVORK5CYII=');
+          display: block;
           width: 72px;
           height: 90px;
-          display: block;
           margin: 10px auto;
+          content: '';
+          background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABaCAMAAAAsLeDlAAAAZlBMVEVHcEzX19fk5OSDg4PT09PS0tLLy8vT09PR0dHMzMzm5ubd3d3Dw8Pc3NyYmJjBwcGgoKC2trb4+PjLy8v19fXJycnS0tLz8/P6+vrv7+/4+PjZ2dnm5ubKysrf39/FxcXPz8+4uLiGMS1tAAAAE3RSTlMAZgr+9OCSghSnKUfurfXVeZe/KKurDwAAAZ9JREFUWMPtmGlzgyAQQJUkRjzTIho5XPz/f7KoMclUbPFoJ53yVD7s7DwXPEA9ryM8n5LTQigOvQkhJqKqlyEIDlGIPot4VWj6xg5W8QSnaWwWLYDVJQAc/V1EBBKDiK2oSAKOox1ElMgkSeMIbe6aBApweo+2iiihUkF73C7SfQNCkzR8ErGrNcNoVhyAEEmJAkh1Tf1AIVwKa5r6VhKBEarvy9jvyCmlYLkDH0piohwsesORF0jtoLJvrbiLikI/cKLWmxBw9gKikffme+RDxPTAsq65ljfREp5ED15PpF5OVDqREznRr4lKjSKWr1roDrPore0AVVrBu5M2ZtFBk7V8wRLLMJdqkZ/3ooZZUzCjCPl5dsigKTahRR6K40vWiu2ibuq/5E21h0jP/Xwf0YoV27yocCInciIncqK/KBJcKS6+CEwSzKJmWL80s4FJglkkxpWQmAlMEmZEfMzjM4FJwoxIjXlqJjBJ+GnRbl3bbbB3u/z73ZDu6XciJ/pfohf7qAn4poK6n3UDERasqFYjgvGXNgrocT0qiNAH7+XXet+PU9EAAAAASUVORK5CYII=');
         }
       }
     }
@@ -331,10 +374,10 @@ body {
 
     .progress-status {
       display: grid;
-      grid-template-columns: 102px 54px 140px 1fr;
+      grid-template-columns: 112px 54px 140px 1fr;
       grid-gap: 6px;
-      margin: 6px 0;
       height: 19px;
+      margin: 6px 0;
       font-size: 14px;
 
       & > div {
@@ -346,33 +389,33 @@ body {
     }
   }
 
-  button, nav > label {
+  button {
+    position: relative;
     display: flex;
+    overflow: hidden;
     align-items: center;
+    height: 32px;
+    margin: 0 4px 0 0;
     padding: 5px 10px;
+    cursor: pointer;
     border: 1px solid #93979a;
     border-radius: 4px;
     outline: none;
     background: rgb(231, 230, 220);
     background: linear-gradient(0deg, rgba(231, 230, 220, 1) 0%, rgba(248, 246, 243, 1) 100%);
-    height: 32px;
-    margin: 0 4px 0 0;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
 
     &:after {
-      content: '';
       position: absolute;
       top: 50%;
       left: 50%;
       width: 5px;
       height: 5px;
-      background: rgba(255, 255, 255, .5);
-      opacity: 0;
-      border-radius: 100%;
+      content: '';
       transform: scale(1, 1) translate(-50%);
       transform-origin: 50% 50%;
+      opacity: 0;
+      border-radius: 100%;
+      background: rgba(255, 255, 255, 0.5);
     }
 
     &:focus:not(:active)::after {
@@ -380,8 +423,8 @@ body {
     }
 
     &:disabled {
-      border-color: #CFCFCF;
       cursor: default;
+      border-color: #cfcfcf;
 
       .icon {
         opacity: 0.3;
@@ -391,7 +434,7 @@ body {
     &.upload,
     &.pause,
     &.cancel {
-      width: 95px;
+      width: 106px;
     }
 
     &.clear {
@@ -399,90 +442,39 @@ body {
     }
   }
 
-  nav {
+  // Sort list
+  .dropdown {
     position: relative;
-
-    input {
-      cursor: pointer;
-      appearance: none;
-      opacity: 0;
-      position: absolute;
-      width: 42px;
-      height: 32px;
-      margin: 0;
-      z-index: 2;
-      top: 0;
-      left: 0;
-
-      &:checked ~ ul {
-        visibility: visible;
-        transition: visibility 0ms ease-out 0ms;
-
-        li {
-          opacity: 1;
-          transform: none;
-        }
-      }
-
-      &:disabled {
-        cursor: default;
-
-        & ~ label {
-          border-color: #CFCFCF;
-
-          .icon {
-            opacity: 0.3;
-          }
-        }
-      }
-    }
-
-    label {
-      transition: all 150ms ease-out;
-      position: relative;
-      transform: translateZ(1px);
-      z-index: 1;
-      width: 42px;
-    }
+    display: inline-block;
 
     ul {
-      will-change: visibility;
-      transition: visibility 0ms ease-out 600ms;
-      visibility: hidden;
+      position: absolute;
       z-index: 1;
-      position: relative;
+      top: 38px;
+      left: 20px;
+      display: none;
+      min-width: 114px;
+      margin: 0;
       padding: 0;
-      margin: 6px 0 0;
       list-style: none;
+      cursor: pointer;
+      border-bottom: 1px solid #cfcfcf;
+      background-color: white;
+      box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.1);
 
       li {
-        will-change: transform, opacity;
+        display: block;
         padding: 5px 10px;
-        opacity: 0;
-        transform: translateY(-100%);
-        border: 1px solid #93979a;
+        transition: background 0.3s;
+        border: 1px solid #cfcfcf;
         border-bottom: none;
-        background-color: white;
-        font-size: 14px;
-        cursor: pointer;
 
-        &:nth-child(1) {
-          transition: opacity 100ms ease-out 500ms, transform 150ms cubic-bezier(0, 0.5, 0.5, 1.1) 500ms, opacity 100ms ease-out 500ms;
-        }
-
-        &:nth-child(2) {
-          transition: opacity 100ms ease-out 400ms, transform 150ms cubic-bezier(0, 0.5, 0.5, 1.1) 400ms, opacity 100ms ease-out 400ms;
-        }
-
-        &:nth-child(3) {
-          transition: opacity 100ms ease-out 300ms, transform 150ms cubic-bezier(0, 0.5, 0.5, 1.1) 300ms, opacity 100ms ease-out 300ms;
-          border-bottom: 1px solid #93979a;
+        &:hover {
+          background-color: #cfcfcf;
         }
       }
     }
   }
-
-
 
   // Sprite SVG
   .icon {
@@ -523,13 +515,8 @@ body {
     }
 
     &.delete {
-      opacity: 0.3;
+      cursor: pointer;
       background: url('../assets/icons.svg#icon-delete') top left no-repeat;
-
-      &.active {
-        opacity: 1;
-        cursor: pointer;
-      }
     }
 
     &.loader {
@@ -555,94 +542,73 @@ body {
 
   // Progress Bar
   progress {
-    appearance: none;
-    border: none;
+    position: relative;
     width: 100%;
     height: 8px;
-    background-color: whiteSmoke;
-    border-radius: 3px;
-    box-shadow: 0 2px 3px rgba(0, 0, 0, .3) inset;
-    color: royalblue;
-    position: relative;
     margin: 0;
+    color: royalblue;
+    border: none;
+    border-radius: 3px;
+    background-color: whiteSmoke;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3) inset;
+    appearance: none;
 
     &::-webkit-progress-bar {
-      background-color: whiteSmoke;
       border-radius: 3px;
-      box-shadow: 0 2px 3px rgba(0, 0, 0, .3) inset;
+      background-color: whiteSmoke;
+      box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3) inset;
     }
 
     &::-webkit-progress-value {
       position: relative;
-      background-size: 35px 20px, 100% 100%, 100% 100%;
-      border-radius: 3px;
       animation: animate-stripes 5s linear infinite;
+      border-radius: 3px;
+      background-size: 35px 20px, 100% 100%, 100% 100%;
 
       &:after {
-        content: '';
         position: absolute;
-        width: 5px;
-        height: 5px;
         top: 7px;
         right: 7px;
-        background-color: white;
+        width: 5px;
+        height: 5px;
+        content: '';
         border-radius: 100%;
+        background-color: white;
       }
     }
 
     &::-moz-progress-bar {
-      background-image: -moz-linear-gradient(135deg,
-              transparent,
-              transparent 33%,
-              rgba(0, 0, 0, .1) 33%,
-              rgba(0, 0, 0, .1) 66%,
-              transparent 66%),
-      -moz-linear-gradient(top,
-                      rgba(255, 255, 255, .25),
-                      rgba(0, 0, 0, .2)),
+      border-radius: 3px;
+      background-image: -moz-linear-gradient(135deg, transparent, transparent 33%, rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.1) 66%, transparent 66%),
+      -moz-linear-gradient(top, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.2)),
       -moz-linear-gradient(left, #09c, #690);
       background-size: 35px 20px, 100% 100%, 100% 100%;
-      border-radius: 3px;
     }
 
     &::-webkit-progress-value {
-      background-image: -webkit-linear-gradient(135deg,
-              transparent,
-              transparent 33%,
-              rgba(0, 0, 0, .1) 33%,
-              rgba(0, 0, 0, .1) 66%,
-              transparent 66%),
-      -webkit-linear-gradient(top,
-                      rgba(255, 255, 255, .25),
-                      rgba(0, 0, 0, .2)),
+      background-image: -webkit-linear-gradient(135deg, transparent, transparent 33%, rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.1) 66%, transparent 66%),
+      -webkit-linear-gradient(top, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.2)),
       -webkit-linear-gradient(left, #09c, #690);
     }
 
     &::-moz-progress-bar {
-      background-image: -moz-linear-gradient(135deg,
-              transparent,
-              transparent 33%,
-              rgba(0, 0, 0, .1) 33%,
-              rgba(0, 0, 0, .1) 66%,
-              transparent 66%),
-      -moz-linear-gradient(top,
-                      rgba(255, 255, 255, .25),
-                      rgba(0, 0, 0, .2)),
+      background-image: -moz-linear-gradient(135deg, transparent, transparent 33%, rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.1) 66%, transparent 66%),
+      -moz-linear-gradient(top, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.2)),
       -moz-linear-gradient(left, #09c, #690);
     }
 
     .progress-bar {
-      background-color: whiteSmoke;
-      border-radius: 3px;
-      box-shadow: 0 2px 3px rgba(0, 0, 0, .3) inset;
       width: 100%;
       height: 8px;
+      border-radius: 3px;
+      background-color: whiteSmoke;
+      box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3) inset;
 
       .progress-bar span {
-        background-color: royalblue;
-        border-radius: 3px;
         display: block;
         text-indent: -9999px;
+        border-radius: 3px;
+        background-color: royalblue;
       }
     }
   }
@@ -664,8 +630,8 @@ body {
       opacity: 1;
     }
     100% {
-      opacity: 0;
       transform: scale(40, 40);
+      opacity: 0;
     }
   }
 }
