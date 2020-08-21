@@ -4,6 +4,8 @@ let totalUploaded = 0;
 let fileUploaded = 0;
 let idUploading = 0;
 let isSortOpen = false;
+let secondsElapsed = 0;
+let totalTime = 0;
 const promoUploader = document.getElementById('promo-uploader');
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
@@ -174,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFilesList();
     cleanThumbnails();
     btnForStart();
+    console.clear();
   });
 
   setTimeout(() => promoUploader.classList.remove('loading'), 200);
@@ -216,7 +219,7 @@ const upload = () => {
           if (idUploading < filesList.length) {
             fileUploaded = bytesUploaded;
             let percentage = ((totalUploaded + bytesUploaded) / totalSize * 100).toFixed(2);
-            let secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
+            secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
             let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
             let KbytesPerSecond = bytesPerSecond / 1000;
             let remainingBytes = totalSize - totalUploaded - bytesUploaded;
@@ -242,7 +245,12 @@ const upload = () => {
         }
       },
       onSuccess: () => {
+        totalTime += secondsElapsed;
+
         if (debugMode) console.log('Download %s from %s', upload.file.name, upload.url);
+        console.log('Uploaded:\n • file name: "%s"', upload.file.name,
+          '\n • file size: ', updateSize(upload.file.size),
+          '\n • upload time: ', clockFormat(secondsElapsed, 0));
 
         totalUploaded += fileUploaded;
         filesList[idUploading].row = 'success';
@@ -260,6 +268,7 @@ const upload = () => {
           uploadComplete();
           btnUpload.setAttribute('disabled', 'true');
           upload.abort();
+          console.log('Total: files ', filesList.length, '| size ', updateSize(totalSize),'| time ', clockFormat(totalTime, 0));
         } else {
           if (idUploading < filesList.length) startUpload();
         }
