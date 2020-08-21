@@ -4,7 +4,7 @@ let totalUploaded = 0;
 let fileUploaded = 0;
 let idUploading = 0;
 let isSortOpen = false;
-const app = document.getElementById('promo-uploader');
+const promoUploader = document.getElementById('promo-uploader');
 const dropZone = document.getElementById('drop-zone');
 const btnUpload = document.getElementById('btn-upload');
 const btnPause = document.getElementById('btn-pause');
@@ -36,8 +36,7 @@ const style = [
 fetch('/promo-uploader/version')
   .then((response) => response.text())
   .then((version) => {
-    document.getElementById('ver').innerHTML = 'v.' + version;
-    console.log('%c%s', style, 'Uploader', 'v.' + version);
+    console.log('%c%s', style, 'Promo Uploader', 'v.' + version);
   });
 
 // in case there are multiple drop zones...
@@ -177,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnForStart();
   });
 
-  setTimeout(() => app.classList.remove('loading'), 200);
+  setTimeout(() => promoUploader.classList.remove('loading'), 200);
 });
 
 window.addEventListener('resize', () => {
