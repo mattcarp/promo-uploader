@@ -475,6 +475,7 @@
     }
 
     &.sort {
+      transform: rotate(90deg);
       background: url('../assets/icons.svg#icon-sort') top left no-repeat;
     }
 
