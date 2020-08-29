@@ -38,16 +38,14 @@ tusd dir
 
    /usr/bin/tusd 
 
-export en vars for tusd (ask matt for keys)
+export en vars for tusd, and start it with transfer acceleration (and never put secrets in github repos):
 
-    export AWS_ACCESS_KEY_ID=xxxxx
-    export AWS_SECRET_ACCESS_KEY=xxxxx
+    cd /usr/bin/tusd/
+    export AWS_ACCESS_KEY_ID=AKIAXHIYZQ3XPYUVADWP
+    export AWS_SECRET_ACCESS_KEY=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
     export AWS_REGION=us-east-1
+    tusd -s3-bucket=tus-upload-demo -s3-transfer-acceleration
 
-run tusd from its directory, specifying bucket
 
-  tusd -s3-bucket=tus-upload-demo
-
-//  or is it s3-bucket=tus-upload-demo.s3-website-us-east-1.amazonaws.com ?
 
 see - https://github.com/tus/tusd/blob/master/docs/usage-binary.md
