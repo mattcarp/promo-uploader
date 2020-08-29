@@ -49,3 +49,13 @@ export env vars for tusd, and start it with transfer acceleration (and never put
 
 
 see - https://github.com/tus/tusd/blob/master/docs/usage-binary.md
+
+grafana is used to monitor cloudwatch logs. currently it's just monitoring s3 storage, but ideally it would also graph the `tusd`/prometheus logs here:
+
+    http://18.213.229.220:1080/metrics
+
+
+grafana creds on the ec2 server:
+
+    /user/share/grafana/.credentials
+
