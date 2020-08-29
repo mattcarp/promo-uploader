@@ -38,7 +38,7 @@ tusd dir
 
    /usr/bin/tusd 
 
-export en vars for tusd, and start it with transfer acceleration (and never put secrets in github repos):
+export env vars for tusd, and start it with transfer acceleration (and never put secrets in github repos):
 
     cd /usr/bin/tusd/
     export AWS_ACCESS_KEY_ID=AKIAXHIYZQ3XPYUVADWP
