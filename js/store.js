@@ -1,13 +1,6 @@
 export class Store {
   fileList = [];
-  totalUploaded = 0;
-  fileList = [];
-  totalSize = 0;
-  fileUploaded = 0;
-  secondsElapsed = 0;
-  totalTime = 0;
-  idUploading = 0;
-  debugMode = false;
+  startedAt;
 
   static instance;
 
@@ -19,67 +12,72 @@ export class Store {
   }
 
   setFileList(fileList) {
-    this.filesList = fileList;
+    this.fileList = fileList;
   }
 
   getFileList() {
     return this.fileList;
   }
 
-  setIdUploading(id) {
-    this.idUploading = id;
+  addFileToFileList(file) {
+    return this.fileList.push({ ...file, id: this.getID() });
   }
 
-  getIdUploading() {
-    return this.idUploading;
+  updateFileStatus(fileId, status, uloaded = false) {
+    this.fileList = this.fileList.map((file) => {
+      if (file.id === fileId) {
+        file.uploaded = uloaded;
+        file.row = status;
+      }
+
+      return file;
+    });
   }
 
-  setTotalUploaded(count) {
-    this.totalUploaded = count;
+  getStartedAt() {
+    return this.startedAt;
   }
 
-  getTotalUploaded() {
-    return this.totalUploaded;
+  setStartedAt() {
+    return (this.startedAt = new Date());
+  }
+
+  getTotalUploaded(currentBytes = 0) {
+    const totalUploaded =  this.fileList
+      .filter((file) => file.uploaded)
+      .reduce((accumulator, currentFile) => {
+        return accumulator + currentFile.fileInfo.size;
+      }, currentBytes);
+    console.log(totalUploaded);
+    return totalUploaded;
   }
 
   setTotalSize(totalSize) {
     this.totalSize = totalSize;
   }
 
-  getTotalSize() {
-    return this.totalSize;
+  getCurrentIndex(){
+    return this.fileList.findIndex((file)=> file.row === 'loading');
   }
 
-  setFileUploaded(fileUploaded) {
-    this.fileUploaded = fileUploaded;
+  getTotalSize() {
+    const totalSize = this.fileList.reduce((accumulator, currentFile) => {
+      return accumulator + currentFile.fileInfo.size;
+    }, 0);
+
+    return totalSize;
+  }
+
+  addToTotalSize(bytes) {
+    this.totalSize = this.totalSize + bytes;
   }
 
   getFileUploaded() {
-    return this.fileUploaded;
+    return {};
   }
 
-  setSecondsElapsed(secondsElapsed) {
-    this.secondsElapsed = secondsElapsed;
-  }
-
-  getSecondsElapsed() {
-    return this.secondsElapsed;
-  }
-
-  setTotalTime(totalTime) {
-    this.totalTime = totalTime;
-  }
-
-  getTotalTime() {
-    return this.totalTime;
-  }
-
-  setDebugMode(debugMode) {
-    this.debugMode = debugMode;
-  }
-
-  getDebugMode() {
-    return this.debugMode;
+  getIsUploading() {
+    return this.fileList.find((file) => file.row === "loading") || false;
   }
 
   sortByField(field) {
@@ -88,23 +86,26 @@ export class Store {
   }
 
   clear() {
-    this.filesList = [];
+    this.fileList = [];
     this.totalSize = 0;
-    this.store.totalUploaded = 0;
   }
 
   setCurrentStatus(status) {
     this.fileList[this.idUploading].row = status;
   }
 
+  getFileToUpload() {
+    return this.fileList.find((file) => file && file.row === "new");
+  }
+
   /**
    * Sort by key
    * @param {string} key
    * @param {array} fileList
-   * @return {array} filesList
+   * @return {array} fileList
    */
-  sortBy(key, filesList) {
-    filesList = filesList.sort((a, b) => {
+  sortBy(key, fileList) {
+    fileList = fileList.sort((a, b) => {
       if (key === "name") {
         if (a.fileInfo.name > b.fileInfo.name) return 1;
         if (b.fileInfo.name > a.fileInfo.name) return -1;
@@ -121,12 +122,18 @@ export class Store {
     });
 
     let i = 0;
-    while (i < filesList.length) {
+    while (i < fileList.length) {
       this.idUploading = i;
-      if (!filesList[i].uploaded) break;
+      if (!fileList[i].uploaded) break;
       i++;
     }
 
-    return filesList;
+    return fileList;
+  }
+
+  getID() {
+    return "_" + Math.random().toString(36).substr(2, 19);
   }
 }
+
+export const store = new Store();

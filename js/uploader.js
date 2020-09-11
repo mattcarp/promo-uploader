@@ -1,29 +1,61 @@
 import { Helper } from "./helper.js";
-import { Store } from "./store.js";
+import { store } from "./store.js";
 import { CONF } from "./config.js";
 import * as elements from "./elements.js";
 
 export class Uploader {
+  upload;
   helper = new Helper();
-  store = new Store();
   htmlElement = new elements.HtmlElements();
+  currentId;
+
+  init() {
+    this.onUploadClick();
+    this.onPauseClick();
+    this.onResumeClick();
+  }
+
+  onUploadClick() {
+    elements.btnUpload.addEventListener("click", () => {
+      store.setStartedAt();
+      this.startUpload();
+    });
+  }
+
+  onPauseClick() {
+    elements.btnPause.addEventListener("click", () => {
+      this.upload.abort();
+      store.updateFileStatus(this.currentId, "pause");
+      this.htmlElement.updateFileList();
+      this.htmlElement.cleanProgressBar();
+    });
+  }
+
+  onResumeClick() {
+    elements.btnUnPause.addEventListener("click", () => {
+      store.updateFileStatus(this.currentId, "loading");
+      this.htmlElement.updateFileList();
+      this.prevUpload();
+    });
+  }
 
   /**
    * Upload -- main function
    * @return {void}
    */
-  upload() {
-    let startedAt = new Date();
-    const debugMode = this.store.getDebugMode();
-    const idUploading = this.store.getIdUploading();
-    const fileList = this.store.getFileList();
+  startUpload() {
+    const fileList = store.getFileList();
 
-    if (debugMode) {
-      console.log("id for uploading file", idUploading);
+    let file = store.getFileToUpload();
+
+    if (!file) {
+      this.finishUploading(fileList);
+      return;
     }
 
-    let file = fileList[idUploading].fileInfo;
-    let upload = new tus.Upload(file, {
+    this.currentId = file.id;
+
+    this.upload = new tus.Upload(file.fileInfo, {
       endpoint: CONF.apiUrl,
       retryDelays: [0, 3000],
       metadata: {
@@ -31,87 +63,47 @@ export class Uploader {
         filetype: file.type,
       },
       onError: (error) => {
-        if (idUploading < fileList.length) {
-          this.htmlElement.uploadComplete();
-          upload.abort();
-          fileList[idUploading].row = "error";
-          this.store.setProgressTotal();
-          elements.progressTotal.innerHTML = "Upload error";
-
-          if (debugMode) console.log("Failed because: " + error);
-        }
+        this.htmlElement.uploadComplete();
+        this.upload.abort();
+        store.updateFileStatus(file.id, "error");
+        //   store.setProgressTotal(); todo
+        elements.progressTotal.innerHTML = "Upload error";
+        this.htmlElement.updateFileList();
       },
       onProgress: (bytesUploaded) => {
-        if (
-          fileList &&
-          fileList[idUploading] &&
-          !fileList[idUploading].uploaded
-        ) {
+        console.log("bytesUploaded", bytesUploaded);
+        store.updateFileStatus(file.id, "loading");
+        if (fileList && fileList.length && bytesUploaded) {
           this.htmlElement.setProgress(bytesUploaded);
-        } else {
-          this.htmlElement.uploadComplete();
-          elements.progressTotal.innerHTML = "Upload checking";
         }
+        // this.htmlElement.uploadComplete();
+        // elements.progressTotal.innerHTML = "Upload checking";
+        this.htmlElement.updateFileList();
       },
       onSuccess: () => {
-       // totalTime += secondsElapsed;
-
-        if (debugMode) {
-          console.log("Download %s from %s", upload.file.name, upload.url);
-          console.log(
-            'Uploaded:\n • file name: "%s"',
-            upload.file.name,
-            "\n • file size: ",
-            this.helper.updateSize(upload.file.size),
-            "\n • upload time: ",
-          //  this.helper.clockFormat(secondsElapsed, 0)
-          );
-        }
-
-       // totalUploaded += fileUploaded;
-        fileList[idUploading].row = "success";
-        fileList[idUploading].uploaded = true;
-        this.htmlElement.updatefileList();
-        //idUploading++;
-
-        Object.keys(localStorage).map((key) => {
-          if (JSON.parse(localStorage.getItem(key)).uploadUrl === upload.url) {
-            localStorage.removeItem(key);
-          }
-        });
-
-        if (idUploading === fileList.length) {
-          this.uploadComplete();
-          elements.btnUpload.setAttribute("disabled", "true");
-          upload.abort();
-          console.log(
-            "Total: files ",
-            fileList.length,
-            "| size ",
-        //    this.helper.updateSize(totalSize),
-            "| time ",
-          //  this.helper.clockFormat(totalTime, 0)
-          );
-        } else {
-         // if (idUploading < fileList.length) startUpload();
-        }
+        store.updateFileStatus(file.id, "success", true);
+        this.htmlElement.updateFileList();
+        this.removeFromLocalstorage();
+        this.startUpload();
       },
     });
+    this.upload.start();
+  }
 
-    elements.btnPause.addEventListener("click", () => {
-      upload.abort();
-      this.store.setCurrentStatus("pause");
-      this.htmlElement.updatefileList();
-      this.htmlElement.cleanProgressBar();
-    });
-
-    elements.btnUnPause.addEventListener("click", () => {
-      this.store.setCurrentStatus("loading");
-      this.htmlElement.updatefileList();
-      this.prevUpload(upload);
-    });
-
-    this.prevUpload(upload);
+  finishUploading(fileList) {
+    this.htmlElement.uploadComplete();
+    elements.btnUpload.setAttribute("disabled", "true");
+    this.upload.abort();
+    const totalTime =
+      (new Date().getTime() - store.getStartedAt().getTime()) / 1000;
+    console.log(
+      "Total: files ",
+      fileList.length,
+      "| size ",
+      this.helper.updateSize(store.getTotalUploaded()),
+      "| time ",
+      this.helper.clockFormat(totalTime, 0)
+    );
   }
 
   /**
@@ -119,15 +111,29 @@ export class Uploader {
    * @param {any} upload
    * @return {void}
    */
-  prevUpload(upload) {
-    upload.findPreviousUploads().then((previousUploads) => {
+  prevUpload() {
+    if (!this.upload) {
+      return;
+    }
+    this.upload.findPreviousUploads().then((previousUploads) => {
       if (previousUploads && previousUploads.length) {
         for (const item of previousUploads) {
-          upload.resumeFromPreviousUpload(item);
+          this.upload.resumeFromPreviousUpload(item);
         }
       }
       // Finally start the upload requests.
-      upload.start();
+      this.startUpload();
+    });
+  }
+
+  removeFromLocalstorage() {
+    if (!this.upload) {
+      return;
+    }
+    Object.keys(localStorage).map((key) => {
+      if (JSON.parse(localStorage.getItem(key)).uploadUrl === this.upload.url) {
+        localStorage.removeItem(key);
+      }
     });
   }
 }

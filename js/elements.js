@@ -1,5 +1,5 @@
 import { Helper } from "./helper.js";
-import { Store } from "./store.js";
+import { store } from "./store.js";
 
 export const promoUploader = document.getElementById("promo-uploader");
 export const dropZone = document.getElementById("drop-zone");
@@ -24,7 +24,6 @@ export const progressBar = document.getElementById("progress-bar");
 
 export class HtmlElements {
   helper = new Helper();
-  store = new Store();
   isSortOpen = false;
 
   /**
@@ -39,7 +38,7 @@ export class HtmlElements {
     btnSort.removeAttribute("disabled");
     btnClear.removeAttribute("disabled");
     this.cleanThumbnails();
-    this.helper.cleanProgressBar();
+    this.cleanProgressBar();
   }
 
   /**
@@ -59,25 +58,29 @@ export class HtmlElements {
    * @return {void}
    */
   cleanProgressBar() {
-    this.progressTotal.innerHTML = "";
+    progressTotal.innerHTML = "";
     progressLength.innerHTML = "";
     progressSize.innerHTML = "";
     progressSpeed.innerHTML = "";
     progress.setAttribute("value", "0");
     progressBar.style.width = "0%";
 
-    // if (!filesList.length) this.btnForStart();
+    // if (!fileList.length) this.btnForStart();
   }
 
   /**
    * Update file list
    * @return {void}
    */
-  updateFileList(filesList) {
+  updateFileList() {
     list.innerHTML = "";
     this.closeSortList();
+    const fileList = store.getFileList();
+    if(!fileList || !fileList.length){
+      return;
+    }
 
-    for (let i = 0; i < filesList.length; i++) {
+    for (let i = 0; i < fileList.length; i++) {
       const grid = document.createElement("div");
       const cellState = document.createElement("div");
       const cellFileName = document.createElement("div");
@@ -90,17 +93,17 @@ export class HtmlElements {
       const iconDelete = document.createElement("i");
 
       grid.classList.add("grid");
-      if (filesList[i].row === "new") grid.classList.add("new");
-      if (filesList[i].row === "loading") grid.classList.add("loading");
-      if (filesList[i].row === "success") grid.classList.add("success");
-      if (filesList[i].row === "pause") grid.classList.add("pause");
-      if (filesList[i].row === "error") grid.classList.add("error");
+      if (fileList[i].row === "new") grid.classList.add("new");
+      if (fileList[i].row === "loading") grid.classList.add("loading");
+      if (fileList[i].row === "success") grid.classList.add("success");
+      if (fileList[i].row === "pause") grid.classList.add("pause");
+      if (fileList[i].row === "error") grid.classList.add("error");
       cellFileName.innerHTML = this.helper.smartTrim(
-        filesList[i].fileInfo.name,
+        fileList[i].fileInfo.name,
         (list.offsetWidth - 164) / 10
       );
       cellFileSize.innerHTML = this.helper.updateSize(
-        filesList[i].fileInfo.size
+        fileList[i].fileInfo.size
       );
 
       iconLoader.classList.add("icon");
@@ -128,13 +131,11 @@ export class HtmlElements {
       list.appendChild(grid);
 
       iconDelete.addEventListener("click", () => {
-        console.log(filesList.splice(i, 1));
-        // if (idUploading !== 0) idUploading--;
         this.updateFileList();
       });
     }
 
-    if (!filesList.length) this.helper.cleanProgressBar();
+    if (!fileList.length) this.helper.cleanProgressBar();
   }
 
   /**
@@ -171,11 +172,9 @@ export class HtmlElements {
 
       btnUpload.addEventListener("click", () => {
         dropZone.classList.add("disabled");
-
         btnUpload.style.display = "none";
         btnPause.style.display = "flex";
         btnSort.setAttribute("disabled", "true");
-        this.upload();
       });
 
       btnListView.addEventListener("click", () => {
@@ -200,22 +199,22 @@ export class HtmlElements {
       });
 
       sortName.addEventListener("click", () => {
-        this.store.sortByField("name");
+        store.sortByField("name");
         this.updateFileList();
       });
 
       sortSize.addEventListener("click", () => {
-        this.store.sortByField("size");
+        store.sortByField("size");
         this.updateFileList();
       });
 
       sortDate.addEventListener("click", () => {
-        this.store.sortByField("lastModified");
+        store.sortByField("lastModified");
         this.updateFileList();
       });
 
       btnClear.addEventListener("click", () => {
-        this.store.clear();
+        store.clear();
         this.cleanThumbnails();
         this.btnForStart();
         this.updateFileList();
@@ -255,42 +254,48 @@ export class HtmlElements {
     });
   }
 
-  setProgress(){
-    if (idUploading < fileList.length) {
-        fileUploaded = bytesUploaded;
-        let percentage = (
-          ((totalUploaded + bytesUploaded) / totalSize) *
-          100
-        ).toFixed(2);
-        secondsElapsed = (new Date().getTime() - startedAt.getTime()) / 1000;
-        let bytesPerSecond = secondsElapsed
-          ? bytesUploaded / secondsElapsed
-          : 0;
-        let KbytesPerSecond = bytesPerSecond / 1000;
-        let remainingBytes = totalSize - totalUploaded - bytesUploaded;
-        let secondsRemaining = remainingBytes / bytesPerSecond;
+  setProgress(bytesUploaded) {
+    const totalSize = store.getTotalSize();
+    const fileList = store.getFileList();
+    const isUploading = store.getIsUploading();
+    const totalUploaded = store.getTotalUploaded(bytesUploaded);
+    const startedAt = store.getStartedAt();
+    const currentIndex = store.getCurrentIndex();
 
-        progressTotal.innerHTML = "Total: " + percentage + "%";
-        progressLength.innerHTML =
-          "(" + (idUploading + 1) + "/" + fileList.length + ")";
-        progressSize.innerHTML =
-          helper.updateSize(totalUploaded + bytesUploaded) +
-          "/" +
-          helper.updateSize(totalSize);
-        progressSpeed.innerHTML =
-          "Speed: " +
-          KbytesPerSecond.toFixed(0) +
-          "Kb/sec, Time left: " +
-          helper.clockFormat(secondsRemaining, 0);
-        progress.setAttribute("value", percentage);
-        progressBar.style.width = percentage + "%";
+    console.log(isUploading);
+    if (isUploading) {
+      let percentage = this.helper.getPercentage(
+        totalUploaded,
+        totalSize
+      );
+      const secondsElapsed =
+        (new Date().getTime() - startedAt.getTime()) / 1000;
+      let bytesPerSecond = secondsElapsed ? bytesUploaded / secondsElapsed : 0;
+      let KbytesPerSecond = bytesPerSecond / 1000;
+      let remainingBytes = totalSize - totalUploaded;
+      console.log(totalSize, totalUploaded);
+      let secondsRemaining = remainingBytes / bytesPerSecond;
 
-        fileList[idUploading].row = "loading";
-        this.updatefileList();
+      progressTotal.innerHTML = this.helper.getProgressTotalString(percentage);
+      progressLength.innerHTML = this.helper.getProgressLength(
+        currentIndex,
+        fileList
+      );
+      progressSize.innerHTML = this.helper.getProgressSize(
+        totalUploaded,
+        totalSize
+      );
+      progressSpeed.innerHTML = this.helper.getProgressSpeed(
+        KbytesPerSecond,
+        secondsRemaining
+      );
+      progress.setAttribute("value", percentage);
+      progressBar.style.width = percentage + "%";
+      // this.updatefileList();
 
-        document.getElementById("icon-delete-" + idUploading).className =
-          "icon delete";
-        btnClear.setAttribute("disabled", "true");
-      }
+      document.getElementById("icon-delete-" + currentIndex).className =
+        "icon delete";
+      btnClear.setAttribute("disabled", "true");
     }
+  }
 }

@@ -47,23 +47,56 @@ export class Helper {
     return output;
   }
 
-    /**
+  /**
    * Ellipsis in the middle of long text (Mac style)
    * @param {string} fileName
    * @param {number} maxLength
    * @return {string} fileName
    */
-  smartTrim(fileName, maxLength){
+  smartTrim(fileName, maxLength) {
     if (!fileName) return fileName;
     if (maxLength < 1) return fileName;
     if (fileName.length <= maxLength) return fileName;
-    if (maxLength === 1) return fileName.substring(0, 1) + '...';
+    if (maxLength === 1) return fileName.substring(0, 1) + "...";
 
     const midpoint = Math.ceil(fileName.length / 2);
     const toRemove = fileName.length - maxLength;
     const lStrip = Math.ceil(toRemove / 2);
     const rStrip = toRemove - lStrip;
 
-    return fileName.substring(0, midpoint - lStrip) + '...' + fileName.substring(midpoint + rStrip);
+    return (
+      fileName.substring(0, midpoint - lStrip) +
+      "..." +
+      fileName.substring(midpoint + rStrip)
+    );
+  }
+
+  getPercentage(totalUploaded, totalSize) {
+    return (((totalUploaded) / totalSize) * 100).toFixed(2);
+  }
+
+  getProgressTotalString(percentage) {
+    return "Total: " + percentage + "%";
+  }
+
+  getProgressLength(currentIndex, fileList) {
+    return "(" + (currentIndex + 1) + "/" + fileList.length + ")";
+  }
+
+  getProgressSize(totalUploaded, totalSize) {
+    return (
+      this.updateSize(totalUploaded) +
+      "/" +
+      this.updateSize(totalSize)
+    );
+  }
+
+  getProgressSpeed(KbytesPerSecond, secondsRemaining) {
+    return (
+      "Speed: " +
+      KbytesPerSecond.toFixed(0) +
+      "Kb/sec, Time left: " +
+      this.clockFormat(secondsRemaining, 0)
+    );
   }
 }
